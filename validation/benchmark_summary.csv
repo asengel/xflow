@@ -1,0 +1,6 @@
+metric,python_or_analytical,eclipse_opm,units_or_note
+initial_crossflow,799.9205,799.5,sm3/d
+final_pressure_r1,256.9231,256.92,bar
+final_pressure_r2,236.9231,236.92,bar
+crossflow_through_well,8699.8,8704,sm3
+inter_region_grid_flow,0,0,sm3
