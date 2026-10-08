@@ -48,6 +48,5 @@ The total remains approximately:
 8624 + 80 = 8704 sm3
 ```
 
-consistent with the regional inventory transfer.
 
 
