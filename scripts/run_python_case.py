@@ -57,7 +57,15 @@ def main() -> None:
     plt.title("Wellbore crossflow and reservoir pressures")
     plt.tight_layout()
 
-    plt.figure(figsize=(10, 6))
+    figures_dir = Path("figures")
+    figures_dir.mkdir(exist_ok=True)
+    fig.savefig(
+        figures_dir / "crossflow_rate_and_pressure_vs_time.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
+
+    fig2 = plt.figure(figsize=(10, 6))
     plt.plot(
         df["time_days"],
         df["cumulative_crossflow_std_m3"],
@@ -69,6 +77,11 @@ def main() -> None:
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
+    fig2.savefig(
+        figures_dir / "cumulative_crossflow_vs_time.png",
+        dpi=200,
+        bbox_inches="tight",
+    )
 
     plt.show()
 
