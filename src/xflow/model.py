@@ -182,16 +182,29 @@ def simulate(case: Case = Case()) -> SimulationResult:
 
     for _ in range(case.max_iterations):
         delta_p_drive = p1 - p2 - delta_p_hydro
-        if delta_p_drive <= case.pressure_tolerance_bar:
-            break
+        q_std_m3d = j_eff * max(delta_p_drive, 0.0)
 
-        q_std_m3d = j_eff * delta_p_drive
-        q_std_m3s = q_std_m3d / DAY_TO_S
-
-        # Intermediate wellbore pressures for QC.
+        # All values stored in a row describe the same state at time_s.
         pw1_bar = p1 - q_std_m3d / j1
         pw2_bar = p2 + q_std_m3d / j2
 
+        rows.append(
+            {
+                "time_days": time_s / DAY_TO_S,
+                "pressure_r1_bar": p1,
+                "pressure_r2_bar": p2,
+                "excess_potential_bar": delta_p_drive,
+                "wellbore_pressure_r1_depth_bar": pw1_bar,
+                "wellbore_pressure_r2_depth_bar": pw2_bar,
+                "crossflow_std_m3d": q_std_m3d,
+                "cumulative_crossflow_std_m3": cumulative_std_m3,
+            }
+        )
+
+        if delta_p_drive <= case.pressure_tolerance_bar:
+            break
+
+        q_std_m3s = q_std_m3d / DAY_TO_S
         dvol_std = q_std_m3s * case.dt_s
         dv1_res = -dvol_std * case.bw1
         dv2_res = +dvol_std * case.bw2
@@ -203,22 +216,6 @@ def simulate(case: Case = Case()) -> SimulationResult:
         p2 += dp2
         time_s += case.dt_s
         cumulative_std_m3 += dvol_std
-
-        rows.append(
-            {
-                "time_days": time_s / DAY_TO_S,
-                "pressure_r1_bar": p1,
-                "pressure_r2_bar": p2,
-                "excess_potential_bar": p1 - p2 - delta_p_hydro,
-                "wellbore_pressure_r1_depth_bar": pw1_bar,
-                "wellbore_pressure_r2_depth_bar": pw2_bar,
-                "crossflow_std_m3d": q_std_m3d,
-                "cumulative_crossflow_std_m3": cumulative_std_m3,
-            }
-        )
-
-    if not rows:
-        raise RuntimeError("Simulation produced no timesteps.")
 
     return SimulationResult(
         data=pd.DataFrame(rows),
