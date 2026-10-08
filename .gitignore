@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Generated outputs
+outputs/
+
+# OPM / Eclipse output
+*.UNRST
+*.UNSMRY
+*.SMSPEC
+*.INIT
+*.EGRID
+*.PRT
+*.DBG
+*.LOG
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
