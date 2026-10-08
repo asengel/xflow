@@ -48,3 +48,21 @@ def test_pressure_difference_converges_to_hydrostatic_head():
         last["pressure_r1_bar"] - last["pressure_r2_bar"]
     )
     assert abs(pressure_difference - 20.0) < 0.02
+
+
+def test_cumulative_transfer_matches_analytical_at_stopping_tolerance():
+    case = Case(dt_s=3600.0)
+    b = analytical_benchmark(case)
+    result = simulate(case)
+    last = result.data.iloc[-1]
+
+    expected_transfer = b["equilibrium_transfer_std_m3"] * (
+        1.0 - case.pressure_tolerance_bar / b["delta_p0_bar"]
+    )
+
+    assert math.isclose(
+        last["cumulative_crossflow_std_m3"],
+        expected_transfer,
+        rel_tol=0,
+        abs_tol=0.05,
+    )
