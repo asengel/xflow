@@ -8,7 +8,6 @@ Expected values for the supplied synthetic case:
 - equilibrium R1 pressure: 256.9231 bar
 - equilibrium R2 pressure: 236.9231 bar
 - equilibrium transferred volume: 8,699.80 m3
-- time constant: 10.8758 d
 - time to 0.01 bar excess potential: 75.1275 d
 
 ## Eclipse/OPM Flow comparison
