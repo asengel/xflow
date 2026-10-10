@@ -1,0 +1,193 @@
+RUNSPEC
+
+DIMENS
+  1  1  3 /
+
+WATER
+
+METRIC
+
+START
+  1 JAN 2026 /
+  
+WELLDIMS
+  1  2  2  1 /
+
+TABDIMS                               
+  1* 2 2* 2 7* 2 /
+
+EQLDIMS                              
+  2 /
+
+UNIFIN
+UNIFOUT
+
+GRID
+
+-- Cell horizontal area = pi * (1000 m)^2
+-- therefore DX = DY = sqrt(pi)*1000 = 1772.4538509 m.
+DX
+  3*1772.4538509 /
+
+DY
+  3*1772.4538509 /
+
+DZ
+   40.0
+  150.0
+   60.0 /
+
+TOPS
+  2280.0
+  2320.0
+  2470.0 /
+
+PORO
+  0.10
+  0.10
+  0.15 /
+
+PERMX
+  200.0
+    1.0
+  500.0 /
+
+PERMY
+  200.0
+    1.0
+  500.0 /
+
+PERMZ
+  200.0
+    1.0
+  500.0 /
+
+NTG
+  1
+  0
+  1 /
+
+INIT
+
+PROPS
+
+ROCKOPTS                             
+  2* ROCKNUM /
+
+DENSITY
+  800.0  1019.716213  1 /
+  800.0  1019.716213  1 /
+
+PVTW
+  230.0  1.0  4.0E-5  0.50  0.0 /
+  260.0  1.0  4.0E-5  0.50  0.0 /
+
+ROCK
+  230.0  6.0E-5 /
+  260.0  6.0E-5 /
+
+REGIONS
+
+PVTNUM
+  1 2 2 /
+
+ROCKNUM
+  1 2 2 /
+
+EQLNUM
+  1 2 2 /
+
+FIPNUM
+  1 2 2 /
+
+SOLUTION
+
+EQUIL                                  
+  2300 230 1* 0 1* 0 0 0 0 /
+  2500 260 1* 0 1* 0 0 0 0 /
+
+SUMMARY
+
+BPR
+  1 1 1 /
+  1 1 3 /
+/
+
+CWFR
+  'XFLOW' 1 1 1 /
+  'XFLOW' 1 1 3 /
+/
+
+CWPT
+  'XFLOW' 1 1 1 /
+  'XFLOW' 1 1 3 /
+/
+
+CWPR
+  'XFLOW' 1 1 1 /
+  'XFLOW' 1 1 3 /
+/
+
+CWIR
+  'XFLOW' 1 1 1 /
+  'XFLOW' 1 1 3 /
+/
+
+CWIT
+  'XFLOW' 1 1 1 /
+  'XFLOW' 1 1 3 /
+/
+
+WWPR
+  'XFLOW' /
+
+WWIR
+  'XFLOW' /
+
+WBHP
+  'XFLOW' /
+
+RWIP
+/
+
+RWFT
+  1 2 /
+/
+
+RWFT
+  2 1 /
+/
+
+SCHEDULE
+
+RPTSCHED                               
+  FIP=2 WELLS /
+
+RPTRST                                 
+  BASIC=3 FLOWS FREQ /
+
+
+GRUPTREE
+  'XGRP' FIELD /
+/
+
+WELSPECS
+  'XFLOW' 'XGRP' 1 1 2300.0 WATER 1000.0 STD STOP YES 1* SEG /
+/
+
+COMPDAT
+  'XFLOW' 1 1 1 1 'OPEN' 1*  50.66163065  0.2  8000.0  0 3* /
+  'XFLOW' 1 1 3 3 'OPEN' 1* 189.98111494  0.2 30000.0  0 3* /
+/
+
+WCONPROD
+  'XFLOW' STOP BHP 5* 245 /
+/
+
+WRFTPLT                               
+'*' REPT REPT /
+/
+
+TSTEP
+  1000*0.1
+/

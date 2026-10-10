@@ -2,23 +2,49 @@
 
 XFlow calculates shut-in wellbore crossflow between two isolated reservoirs using a **closed-form analytical two-tank model**. Open downhole completions connect the reservoirs, while surface well flow is zero.
 
-## Run
+## Installation
 
-With no arguments, XFlow loads `cases/validation_case.json`, calculates crossflow, displays three plots, and includes the recorded OPM Flow benchmark automatically.
+Requires Python 3.10 or newer.
 
-## Run your own case
+Clone the repository and install the package:
 
-1. Copy `cases/validation_case.json` to `cases/my_case.json`.
-2. Edit the numeric parameters in your copy (pressures, reservoir properties, completion depths, etc.). The JSON must include all parameters; units are given below.
-3. Run
+```powershell
+git clone https://github.com/asengel/xflow.git
+cd xflow
+python -m pip install -e .
+```
 
-OPM Flow benchmark overlays appear **only** when running the bundled `cases/validation_case.json`. A copied or custom JSON file generates analytical results only, even when its parameters are identical to the validation inputs. 
+## Run the validation case
 
-Run without opening plot windows:
-run_python_case.py --no-show
-run_python_case.py cases\my_case.json --no-show
+Run the bundled validation case:
 
-Additional options are `--days 100`, `--points 500`, and `--output-dir PATH`. Run `--help` for details.
+```powershell
+python scripts/run_python_case.py
+```
+
+This calculates the analytical crossflow solution, compares it with the bundled OPM Flow benchmark, generates CSV results, and displays three plots.
+
+## Run a custom case
+
+Copy the validation JSON file:
+
+```powershell
+Copy-Item cases/validation_case.json cases/my_case.json
+```
+
+Edit the parameters in `cases/my_case.json` and run:
+
+```powershell
+python scripts/run_python_case.py cases/my_case.json
+```
+
+To save results without opening plot windows, add `--no-show`:
+
+```powershell
+python scripts/run_python_case.py --no-show
+```
+
+Results are saved automatically under `outputs/`.
 
 ## Case JSON format
 
