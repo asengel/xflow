@@ -1,0 +1,11 @@
+{
+  "source": "CASE.SMSPEC and CASE.UNSMRY, actual OPM Flow binary summary",
+  "first_recorded_time_days": 0.10000000149011612,
+  "first_recorded_crossflow_std_m3d": 792.6338500976562,
+  "last_recorded_time_days": 100.0,
+  "last_recorded_crossflow_std_m3d": 0.08507951349020004,
+  "last_recorded_r1_pressure_bar": 256.92156982421875,
+  "last_recorded_r2_pressure_bar": 236.9229736328125,
+  "last_recorded_cumulative_crossflow_std_m3": 8702.685546875,
+  "note": "Day 100 is the final simulation record, not mathematical equilibrium. The original source time series is in opm_flow_timeseries.csv."
+}

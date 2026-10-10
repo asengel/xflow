@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Iterable
 import math
 
 import pandas as pd
@@ -16,7 +17,7 @@ DAY_TO_S = 86400.0
 class Case:
     """Input data for the synthetic two-reservoir crossflow problem."""
 
-    # Lower / overpressured reservoir R1
+    # Reservoir R1 (arbitrary depth, pressure and flow direction)
     phi1: float = 0.15
     skin1: float = 0.0
     cw1_bar: float = 4.0e-5
@@ -28,7 +29,7 @@ class Case:
     k1_md: float = 500.0
     bw1: float = 1.0
 
-    # Upper / receiving reservoir R2
+    # Reservoir R2 (arbitrary depth, pressure and flow direction)
     phi2: float = 0.10
     skin2: float = 0.0
     cw2_bar: float = 4.0e-5
@@ -45,21 +46,8 @@ class Case:
     re_m: float = 1000.0
     rw_m: float = 0.10
 
-    # Numerics
-    dt_s: float = 3600.0
-    max_iterations: int = 10000
+    # Analytical stopping threshold (not a numerical integration timestep)
     pressure_tolerance_bar: float = 0.01
-
-
-@dataclass(frozen=True)
-class SimulationResult:
-    data: pd.DataFrame
-    j1_m3d_bar: float
-    j2_m3d_bar: float
-    j_eff_m3d_bar: float
-    pv1_m3: float
-    pv2_m3: float
-    delta_p_hydro_bar: float
 
 
 def _productivity_index_surface(
@@ -81,7 +69,7 @@ def _productivity_index_surface(
 
 
 def analytical_benchmark(case: Case = Case()) -> dict[str, float]:
-    """Return closed-form benchmark values for the linear lumped model."""
+    """Return exact benchmark quantities for the linear lumped model."""
     pv1 = math.pi * case.re_m**2 * case.h1_m * case.phi1
     pv2 = math.pi * case.re_m**2 * case.h2_m * case.phi2
 
@@ -106,6 +94,11 @@ def analytical_benchmark(case: Case = Case()) -> dict[str, float]:
         re_m=case.re_m,
         rw_m=case.rw_m,
     )
+    if min(pv1, pv2, ct1, ct2, j1, j2, case.bw1, case.bw2) <= 0:
+        raise ValueError("Pore volumes, compressibilities, volume factors and PIs must be positive")
+    if case.pressure_tolerance_bar < 0:
+        raise ValueError("pressure_tolerance_bar cannot be negative")
+
     j_eff = 1.0 / (1.0 / j1 + 1.0 / j2)
 
     delta_p_hydro = (
@@ -113,7 +106,6 @@ def analytical_benchmark(case: Case = Case()) -> dict[str, float]:
     ) * case.pressure_gradient_bar_m
 
     delta_p0 = case.p1_start_bar - case.p2_start_bar - delta_p_hydro
-
     initial_q = j_eff * delta_p0
 
     storage_inv = (
@@ -123,24 +115,22 @@ def analytical_benchmark(case: Case = Case()) -> dict[str, float]:
     lambda_per_day = j_eff * storage_inv
     tau_days = 1.0 / lambda_per_day
 
-    transferred_std_m3 = delta_p0 / (
-        case.bw1 / (pv1 * ct1)
-        + case.bw2 / (pv2 * ct2)
-    )
+    transferred_std_m3 = delta_p0 / storage_inv
 
-    # Reservoir-volume changes in each tank
     dv1_res = transferred_std_m3 * case.bw1
     dv2_res = transferred_std_m3 * case.bw2
 
     p1_eq = case.p1_start_bar - dv1_res / (pv1 * ct1)
     p2_eq = case.p2_start_bar + dv2_res / (pv2 * ct2)
 
-    if case.pressure_tolerance_bar > 0:
-        time_to_tolerance = tau_days * math.log(
-            delta_p0 / case.pressure_tolerance_bar
-        )
-    else:
+    if abs(delta_p0) <= case.pressure_tolerance_bar:
+        time_to_tolerance = 0.0
+    elif case.pressure_tolerance_bar == 0:
         time_to_tolerance = math.inf
+    else:
+        time_to_tolerance = tau_days * math.log(
+            abs(delta_p0) / case.pressure_tolerance_bar
+        )
 
     return {
         "pv1_m3": pv1,
@@ -151,6 +141,7 @@ def analytical_benchmark(case: Case = Case()) -> dict[str, float]:
         "delta_p_hydro_bar": delta_p_hydro,
         "delta_p0_bar": delta_p0,
         "initial_q_std_m3d": initial_q,
+        "flow_direction": ("R1_to_R2" if delta_p0 > 0 else "R2_to_R1" if delta_p0 < 0 else "equilibrium"),
         "tau_days": tau_days,
         "time_to_tolerance_days": time_to_tolerance,
         "equilibrium_transfer_std_m3": transferred_std_m3,
@@ -159,70 +150,43 @@ def analytical_benchmark(case: Case = Case()) -> dict[str, float]:
     }
 
 
-def simulate(case: Case = Case()) -> SimulationResult:
-    """Numerically integrate the simplified two-tank crossflow model."""
-    bench = analytical_benchmark(case)
+def analytical_timeseries(
+    case: Case = Case(), *, times_days: Iterable[float]
+) -> pd.DataFrame:
+    """Return exact crossflow states at requested nonnegative times (days).
 
-    pv1 = bench["pv1_m3"]
-    pv2 = bench["pv2_m3"]
-    j1 = bench["j1_m3d_bar"]
-    j2 = bench["j2_m3d_bar"]
-    j_eff = bench["j_eff_m3d_bar"]
-    delta_p_hydro = bench["delta_p_hydro_bar"]
+    Preserves the input time order, including duplicates; it does not integrate
+    over timesteps. Signed rates and transfers are positive from R1 to R2.
+    """
+    b = analytical_benchmark(case)
+    a1 = case.bw1 / (b["pv1_m3"] * (case.cw1_bar + case.cf1_bar))
+    a2 = case.bw2 / (b["pv2_m3"] * (case.cw2_bar + case.cf2_bar))
+    rows = []
 
-    ct1 = case.cw1_bar + case.cf1_bar
-    ct2 = case.cw2_bar + case.cf2_bar
+    for t in times_days:
+        t = float(t)
+        if not math.isfinite(t) or t < 0:
+            raise ValueError("All times_days must be finite and nonnegative")
 
-    p1 = case.p1_start_bar
-    p2 = case.p2_start_bar
-    time_s = 0.0
-    cumulative_std_m3 = 0.0
+        exponent = -t / b["tau_days"]
+        decay = math.exp(exponent)
+        fraction_transferred = -math.expm1(exponent)
+        transferred = b["equilibrium_transfer_std_m3"] * fraction_transferred
+        rate = b["initial_q_std_m3d"] * decay
+        p1 = case.p1_start_bar - a1 * transferred
+        p2 = case.p2_start_bar + a2 * transferred
 
-    rows: list[dict[str, float]] = []
+        rows.append({
+            "time_days": t,
+            "pressure_r1_bar": p1,
+            "pressure_r2_bar": p2,
+            "excess_potential_bar": b["delta_p0_bar"] * decay,
+            "wellbore_pressure_r1_depth_bar": p1 - rate / b["j1_m3d_bar"],
+            "wellbore_pressure_r2_depth_bar": p2 + rate / b["j2_m3d_bar"],
+            "crossflow_std_m3d": rate,
+            "cumulative_crossflow_std_m3": transferred,
+        })
 
-    for _ in range(case.max_iterations):
-        delta_p_drive = p1 - p2 - delta_p_hydro
-        q_std_m3d = j_eff * max(delta_p_drive, 0.0)
-
-        # All values stored in a row describe the same state at time_s.
-        pw1_bar = p1 - q_std_m3d / j1
-        pw2_bar = p2 + q_std_m3d / j2
-
-        rows.append(
-            {
-                "time_days": time_s / DAY_TO_S,
-                "pressure_r1_bar": p1,
-                "pressure_r2_bar": p2,
-                "excess_potential_bar": delta_p_drive,
-                "wellbore_pressure_r1_depth_bar": pw1_bar,
-                "wellbore_pressure_r2_depth_bar": pw2_bar,
-                "crossflow_std_m3d": q_std_m3d,
-                "cumulative_crossflow_std_m3": cumulative_std_m3,
-            }
-        )
-
-        if delta_p_drive <= case.pressure_tolerance_bar:
-            break
-
-        q_std_m3s = q_std_m3d / DAY_TO_S
-        dvol_std = q_std_m3s * case.dt_s
-        dv1_res = -dvol_std * case.bw1
-        dv2_res = +dvol_std * case.bw2
-
-        dp1 = dv1_res / (pv1 * ct1)
-        dp2 = dv2_res / (pv2 * ct2)
-
-        p1 += dp1
-        p2 += dp2
-        time_s += case.dt_s
-        cumulative_std_m3 += dvol_std
-
-    return SimulationResult(
-        data=pd.DataFrame(rows),
-        j1_m3d_bar=j1,
-        j2_m3d_bar=j2,
-        j_eff_m3d_bar=j_eff,
-        pv1_m3=pv1,
-        pv2_m3=pv2,
-        delta_p_hydro_bar=delta_p_hydro,
-    )
+    if not rows:
+        raise ValueError("times_days must contain at least one time")
+    return pd.DataFrame.from_records(rows)

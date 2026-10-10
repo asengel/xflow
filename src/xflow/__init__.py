@@ -1,5 +1,4 @@
-"""Two-reservoir shut-in wellbore crossflow benchmark."""
+"""Analytical crossflow between two isolated reservoirs connected by a wellbore."""
+from .model import Case, analytical_benchmark, analytical_timeseries
 
-from .model import Case, SimulationResult, analytical_benchmark, simulate
-
-__all__ = ["Case", "SimulationResult", "analytical_benchmark", "simulate"]
+__all__ = ["Case", "analytical_benchmark", "analytical_timeseries"]

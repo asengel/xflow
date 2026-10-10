@@ -1,15 +1,28 @@
-# Python
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
 __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
-.venv/
-venv/
 
-# Generated outputs
+# Generated results
 outputs/
 
-# OPM / Eclipse output
+# Build artifacts
+build/
+dist/
+
+# IDE and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# OPM Flow simulation output
 *.UNRST
 *.UNSMRY
 *.SMSPEC
@@ -18,9 +31,3 @@ outputs/
 *.PRT
 *.DBG
 *.LOG
-
-# IDE / OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
